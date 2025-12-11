@@ -2,8 +2,7 @@ name: Auto Generate Article
 
 on:
   schedule:
-    # Публикация каждый день в 09:00 по Алматы (UTC+6) = 03:00 UTC
-    - cron: '0 3 * * *'
+    - cron: '0 3 * * *'  # каждый день 09:00 Алматы = 03:00 UTC
   workflow_dispatch:
 
 jobs:
@@ -15,7 +14,7 @@ jobs:
 
       - name: Install jq
         run: |
-          sudo apt-get update -y
+          sudo apt-get update
           sudo apt-get install -y jq
 
       - name: Generate article with OpenAI
@@ -24,21 +23,18 @@ jobs:
           TZ: "Asia/Almaty"
         run: |
           mkdir -p _posts
-          read -r -d '' PROMPT <<'EOF'
-You are a professional tech journalist. Generate one SEO-ready Russian article about gadgets or technology news. Output must be valid Jekyll post: start with YAML front matter with fields: title, date (ISO 8601 +06:00), categories (list), tags (list), excerpt. After YAML, provide the article in markdown: H1, H2s, bullet lists, table (markdown), FAQ (H2+Q/A), conclusion with CTA [Купить на AliExpress](AFFILIATE_LINK). Length ~1000–1400 words.
-EOF
 
-          cat > payload.json <<PAY
-{
-  "model": "gpt-4o-mini",
-  "messages": [
-    {"role":"system","content":"You are a professional tech journalist writing concise, factual, SEO-friendly Russian articles."},
-    {"role":"user","content": "'"${PROMPT}"'"}
-  ],
-  "max_tokens": 2500,
-  "temperature": 0.7
-}
-PAY
+          PROMPT='You are a professional tech journalist. Generate one SEO-ready Russian article about gadgets or technology news. Output must be valid Jekyll post: start with YAML front matter with fields: title, date (ISO 8601 +06:00), categories (list), tags (list), excerpt. After YAML, provide the article in markdown: H1, H2s, bullet lists, table (markdown), FAQ (H2+Q/A), conclusion with CTA [Купить на AliExpress](AFFILIATE_LINK). Length ~1000–1400 words.'
+
+          echo "{
+            \"model\": \"gpt-4o-mini\",
+            \"messages\": [
+              {\"role\":\"system\",\"content\":\"You are a professional tech journalist writing concise, factual, SEO-friendly Russian articles.\"},
+              {\"role\":\"user\",\"content\":\"$PROMPT\"}
+            ],
+            \"max_tokens\": 2500,
+            \"temperature\": 0.7
+          }" > payload.json
 
           RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
             -H "Content-Type: application/json" \
