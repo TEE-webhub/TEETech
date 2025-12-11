@@ -1,0 +1,8 @@
+title: "Gadget News"
+email: "you@example.com"
+description: "Автогенерируемые статьи про гаджеты и технологии"
+baseurl: "" # если используешь custom domain — укажи его
+url: "https://yourname.github.io" # замени на свой адрес
+theme: minima
+plugins:
+  - jekyll-feed
