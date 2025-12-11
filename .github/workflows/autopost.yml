@@ -1,0 +1,71 @@
+name: Auto Generate Article
+
+on:
+  schedule:
+    # Публикация каждый день в 09:00 по Алматы (UTC+6) = 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install jq
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
+      - name: Generate article with OpenAI
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TZ: "Asia/Almaty"
+        run: |
+          mkdir -p _posts
+          read -r -d '' PROMPT <<'EOF'
+You are a professional tech journalist. Generate one SEO-ready Russian article about gadgets or technology news. Output must be valid Jekyll post: start with YAML front matter with fields: title, date (ISO 8601 +06:00), categories (list), tags (list), excerpt. After YAML, provide the article in markdown: H1, H2s, bullet lists, table (markdown), FAQ (H2+Q/A), conclusion with CTA [Купить на AliExpress](AFFILIATE_LINK). Length ~1000–1400 words.
+EOF
+
+          cat > payload.json <<PAY
+{
+  "model": "gpt-4o-mini",
+  "messages": [
+    {"role":"system","content":"You are a professional tech journalist writing concise, factual, SEO-friendly Russian articles."},
+    {"role":"user","content": "'"${PROMPT}"'"}
+  ],
+  "max_tokens": 2500,
+  "temperature": 0.7
+}
+PAY
+
+          RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
+            -d @payload.json)
+
+          ARTICLE=$(echo "$RESPONSE" | jq -r '.choices[0].message.content')
+
+          if [ -z "$ARTICLE" ] || [ "$ARTICLE" = "null" ]; then
+            echo "No article received"
+            exit 1
+          fi
+
+          TITLE=$(echo "$ARTICLE" | sed -n 's/^title:[[:space:]]*"\{0,1\}\(.*\)"\{0,1\}$/\1/p' | head -n1 | sed 's/[^a-zA-Z0-9А-Яа-яёЁ ]/-/g' | sed 's/ /-/g' | tr '[:upper:]' '[:lower:]' | head -c60)
+          if [ -z "$TITLE" ]; then
+            TITLE="post-$(date +%s)"
+          fi
+          DATE=$(date -u +"%Y-%m-%d")
+          FILENAME="_posts/${DATE}-${TITLE}.md"
+
+          echo "$ARTICLE" > "$FILENAME"
+          echo "Created $FILENAME"
+
+      - name: Commit and push
+        run: |
+          git config --global user.email "bot@localhost"
+          git config --global user.name "AutoArticleBot"
+          git add _posts || true
+          git commit -m "Auto article $(date -u +"%Y-%m-%dT%H:%M:%SZ")" || echo "No changes to commit"
+          git push origin HEAD:main
