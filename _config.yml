@@ -1,8 +1,14 @@
-title: "Gadget News"
-email: "you@example.com"
-description: "Автогенерируемые статьи про гаджеты и технологии"
-baseurl: "" # если используешь custom domain — укажи его
-url: "https://yourname.github.io" # замени на свой адрес
-theme: minima
+title: Gadget News
+email: tursynbekovee@mail.ru
+description: Автогенерируемые статьи про гаджеты и технологии
+baseurl: ""
+url: "https://tee-webhub.github.io/TEETech"
+
+theme: minimal-mistakes-jekyll
+
 plugins:
   - jekyll-feed
+  - jekyll-seo-tag
+
+author:
+  name: Gadget News
