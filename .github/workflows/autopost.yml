@@ -2,12 +2,18 @@ name: Auto Generate Tech Article
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: write
 
 jobs:
   generate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
@@ -16,7 +22,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           mkdir -p _posts
-
           DATE=$(date +"%Y-%m-%d")
           FILE="_posts/$DATE-tech-article.md"
 
@@ -25,22 +30,22 @@ jobs:
             \"messages\": [
               {
                 \"role\": \"user\",
-                \"content\": \"Напиши статью на русском про новый гаджет. Формат Jekyll: YAML front matter (title, date, categories, tags), затем markdown текст.\"
+                \"content\": \"Напиши SEO-статью на русском про популярный гаджет. Формат Jekyll: YAML front matter (title, date, categories, tags), затем markdown текст.\"
               }
             ]
           }" > body.json
 
           RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
-            -H \"Content-Type: application/json\" \
-            -H \"Authorization: Bearer $OPENAI_API_KEY\" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $OPENAI_API_KEY" \
             -d @body.json)
 
           echo "$RESPONSE" | jq -r '.choices[0].message.content' > "$FILE"
 
       - name: Commit and push
         run: |
-          git config user.name "AutoBot"
-          git config user.email "bot@github.com"
+          git config user.email "bot@localhost"
+          git config user.name "AutoArticleBot"
           git add _posts
-          git commit -m "Auto article"
+          git commit -m "Auto article" || echo "Nothing to commit"
           git push
