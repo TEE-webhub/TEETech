@@ -21,7 +21,9 @@ jobs:
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          mkdir -p _posts
+          rm -rf _posts
+          mkdir _posts
+
           DATE=$(date +"%Y-%m-%d")
           FILE="_posts/$DATE-tech-article.md"
 
